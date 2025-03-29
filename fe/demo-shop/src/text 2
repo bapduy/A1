@@ -56,14 +56,13 @@ BlynkTimer timer;
 void readAndUpdateSensor() {
   float temp = dht.readTemperature();
   float humi = dht.readHumidity();
-
   if (!isnan(temp)) t = temp;
   if (!isnan(humi)) h = humi;
 
   int total = 0;
   for (int i = 0; i < 10; i++) {
     total += analogRead(SOIL_PIN);
-    delay(10);
+    delay(1);
   }
   soilValue = total / 10;
   soilPercent = map(soilValue, 4095, 0, 0, 100);
@@ -99,32 +98,21 @@ void scrollMessage() {
 void drawDisplay() {
   display.clearDisplay();
   DateTime now = rtc.now();
-
-  // Hiển thị: Sun, 29/03/2025 14:09
   display.setCursor(0, 0);
   display.printf("%s, %02d/%02d/%04d %02d:%02d",
-    daysOfTheWeek[now.dayOfTheWeek()],
-    now.day(), now.month(), now.year(),
-    now.hour(), now.minute()
-  );
-
+    daysOfTheWeek[now.dayOfTheWeek()], now.day(), now.month(), now.year(), now.hour(), now.minute());
   display.setCursor(x, 10);
   display.print(message);
-
   display.setCursor(0, 20);
   display.printf("Air Temp: %.1f C", t);
   display.drawBitmap(100, 20, temp_arr, 16, 16, 1);
-
   display.setCursor(0, 30);
   display.printf("Humidity: %.1f %%,", h);
   display.drawBitmap(100, 30, humi_arr, 16, 16, 1);
-
   display.setCursor(0, 40);
   display.printf("Soil: %d%%", soilPercent);
-
   display.setCursor(0, 50);
   display.printf("Pump: %s", digitalRead(RELAY_PIN) ? "ON" : "OFF");
-
   display.display();
 }
 
@@ -136,23 +124,22 @@ void setup() {
 
   dht.begin();
   rtc.begin();
-
-  // ✅ Chạy 1 lần để cập nhật thời gian đúng (sau đó có thể comment lại)
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   WiFi.begin(ssid, pass);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(100);
     Serial.print(".");
   }
 
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("❌ SSD1306 allocation failed"));
+    Serial.println(F("SSD1306 allocation failed"));
     while (1);
   }
-
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
@@ -171,21 +158,30 @@ void loop() {
   timer.run();
 }
 
-// Điều khiển từ Blynk
+BLYNK_CONNECTED() {
+  Blynk.syncVirtual(V0, V1, V3);
+}
+
 BLYNK_WRITE(V0) {
   autoMode = param.asInt();
-  timerMode = false;
-  manualPump = false;
+  if (autoMode) {
+    timerMode = false;
+    manualPump = false;
+  }
 }
 
 BLYNK_WRITE(V1) {
   timerMode = param.asInt();
-  autoMode = false;
-  manualPump = false;
+  if (timerMode) {
+    autoMode = false;
+    manualPump = false;
+  }
 }
 
 BLYNK_WRITE(V3) {
   manualPump = param.asInt();
-  autoMode = false;
-  timerMode = false;
+  if (manualPump) {
+    autoMode = false;
+    timerMode = false;
+  }
 }
