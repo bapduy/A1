@@ -67,6 +67,13 @@ void readAndUpdateSensor() {
   soilValue = total / 10;
   soilPercent = map(soilValue, 4095, 0, 0, 100);
 
+  Serial.print("Soil: ");
+  Serial.print(soilPercent);
+  Serial.print(" %, Temp: ");
+  Serial.print(t);
+  Serial.print(" °C, Humidity: ");
+  Serial.println(h);
+
   Blynk.virtualWrite(V4, soilPercent);
   Blynk.virtualWrite(V5, h);
   Blynk.virtualWrite(V6, t);
@@ -140,6 +147,7 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     while (1);
   }
+
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
@@ -158,8 +166,12 @@ void loop() {
   timer.run();
 }
 
+// Khi thiết bị kết nối với Blynk
 BLYNK_CONNECTED() {
   Blynk.syncVirtual(V0, V1, V3);
+  Blynk.virtualWrite(V4, soilPercent);
+  Blynk.virtualWrite(V5, h);
+  Blynk.virtualWrite(V6, t);
 }
 
 BLYNK_WRITE(V0) {
