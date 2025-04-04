@@ -111,7 +111,7 @@ void drawDisplay() {
   display.setCursor(x, 10);
   display.print(message);
   display.setCursor(0, 20);
-  display.printf("Air Temp: %.1f C", t);
+display.printf("Air Temp: %.1f C", t);
   display.drawBitmap(100, 20, temp_arr, 16, 16, 1);
   display.setCursor(0, 30);
   display.printf("Humidity: %.1f %%,", h);
@@ -131,7 +131,9 @@ void setup() {
 
   dht.begin();
   rtc.begin();
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+  // ⚠️ Chỉ dùng dòng này 1 lần để set thời gian, sau đó COMMENT lại để giữ thời gian thật của RTC:
+  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   WiFi.begin(ssid, pass);
   WiFi.setAutoReconnect(true);
@@ -166,12 +168,12 @@ void loop() {
   timer.run();
 }
 
-// Khi thiết bị kết nối với Blynk
 BLYNK_CONNECTED() {
   Blynk.syncVirtual(V0, V1, V3);
   Blynk.virtualWrite(V4, soilPercent);
   Blynk.virtualWrite(V5, h);
   Blynk.virtualWrite(V6, t);
+  Blynk.virtualWrite(V7, message);
 }
 
 BLYNK_WRITE(V0) {
