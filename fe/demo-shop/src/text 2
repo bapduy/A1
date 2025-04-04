@@ -1,3 +1,4 @@
+
 #define BLYNK_TEMPLATE_ID "TMPL6nF0x99Wh"
 #define BLYNK_TEMPLATE_NAME "Quickstart Template"
 #define BLYNK_AUTH_TOKEN "QZakN_fp8wBf7UumPqJMvYJ6wDdezBQK"
@@ -32,6 +33,7 @@ int soilPercent = 0;
 bool autoMode = true;
 bool timerMode = false;
 bool manualPump = false;
+bool displayReady = false;
 
 char message[] = "Ngo Huu Duy - GCS200881";
 char daysOfTheWeek[7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
@@ -103,6 +105,7 @@ void scrollMessage() {
 }
 
 void drawDisplay() {
+  if (!displayReady) return;
   display.clearDisplay();
   DateTime now = rtc.now();
   display.setCursor(0, 0);
@@ -111,7 +114,7 @@ void drawDisplay() {
   display.setCursor(x, 10);
   display.print(message);
   display.setCursor(0, 20);
-display.printf("Air Temp: %.1f C", t);
+  display.printf("Air Temp: %.1f C", t);
   display.drawBitmap(100, 20, temp_arr, 16, 16, 1);
   display.setCursor(0, 30);
   display.printf("Humidity: %.1f %%,", h);
@@ -145,18 +148,17 @@ void setup() {
 
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    while (1);
+  if (display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    displayReady = true;
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setTextWrap(false);
+    x = display.width();
+    minX = -6 * strlen(message);
+  } else {
+    Serial.println(F("SSD1306 not found. Skipping OLED display."));
   }
-
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setTextWrap(false);
-
-  x = display.width();
-  minX = -6 * strlen(message);
 
   timer.setInterval(2000L, readAndUpdateSensor);
   timer.setInterval(20L, scrollMessage);
