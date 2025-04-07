@@ -60,12 +60,7 @@ void readSensors() {
   if (!isnan(temp)) t = temp;
   if (!isnan(humi)) h = humi;
 
-  int total = 0;
-  for (int i = 0; i < 10; i++) {
-    total += analogRead(SOIL_PIN);
-    delay(1);
-  }
-  soilValue = total / 10;
+  soilValue = analogRead(SOIL_PIN);
   soilPercent = map(soilValue, 4095, 0, 0, 100);
 
   Serial.print("Soil: "); Serial.print(soilPercent);
@@ -168,7 +163,7 @@ void setup() {
   x = display.width();
   minX = -6 * strlen(message);
 
-  timer.setInterval(5000L, readSensors);
+  timer.setInterval(10000L, readSensors);     // Gửi dữ liệu mỗi 10 giây
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
 }
@@ -182,14 +177,8 @@ void loop() {
 BLYNK_CONNECTED() {
   timer.setTimeout(2000L, []() {
     Blynk.syncVirtual(V0, V1, V3);
+    readSensors();  // Gửi lại dữ liệu 1 lần khi kết nối xong
   });
-
-  if (Blynk.connected()) {
-    Blynk.virtualWrite(V4, soilPercent);
-    Blynk.virtualWrite(V5, h);
-    Blynk.virtualWrite(V6, t);
-    Blynk.virtualWrite(V7, message);
-  }
 }
 
 BLYNK_WRITE(V0) {
