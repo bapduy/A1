@@ -72,9 +72,11 @@ void readSensors() {
   Serial.print(" %, Temp: "); Serial.print(t);
   Serial.print(" C, Humidity: "); Serial.println(h);
 
-  Blynk.virtualWrite(V4, soilPercent);
-  Blynk.virtualWrite(V5, h);
-  Blynk.virtualWrite(V6, t);
+  if (Blynk.connected()) {
+    Blynk.virtualWrite(V4, soilPercent);
+    Blynk.virtualWrite(V5, h);
+    Blynk.virtualWrite(V6, t);
+  }
 }
 
 void scrollMessage() {
@@ -110,11 +112,22 @@ void controlPump() {
 
   if (manualPump) {
     digitalWrite(RELAY_PIN, HIGH);
+    delay(200);
   } else if (autoMode) {
-    digitalWrite(RELAY_PIN, (soilPercent < 40 && h < 80 && t >= 15 && t <= 40) ? HIGH : LOW);
+    if (soilPercent < 40 && h < 80 && t >= 15 && t <= 40) {
+      digitalWrite(RELAY_PIN, HIGH);
+      delay(200);
+    } else {
+      digitalWrite(RELAY_PIN, LOW);
+    }
   } else if (timerMode) {
     if ((hour == 6 || hour == 17) && minute < 5) {
-      digitalWrite(RELAY_PIN, (soilPercent < 40 && h < 80 && t >= 15 && t <= 40) ? HIGH : LOW);
+      if (soilPercent < 40 && h < 80 && t >= 15 && t <= 40) {
+        digitalWrite(RELAY_PIN, HIGH);
+        delay(200);
+      } else {
+        digitalWrite(RELAY_PIN, LOW);
+      }
     } else {
       digitalWrite(RELAY_PIN, LOW);
     }
@@ -155,7 +168,7 @@ void setup() {
   x = display.width();
   minX = -6 * strlen(message);
 
-  timer.setInterval(2000L, readSensors);
+  timer.setInterval(5000L, readSensors);
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
 }
@@ -163,15 +176,20 @@ void setup() {
 void loop() {
   Blynk.run();
   timer.run();
-  controlPump(); // <== chạy liên tục, cập nhật theo trạng thái Blynk
+  controlPump();
 }
 
 BLYNK_CONNECTED() {
-  Blynk.syncVirtual(V0, V1, V3);
-  Blynk.virtualWrite(V4, soilPercent);
-  Blynk.virtualWrite(V5, h);
-  Blynk.virtualWrite(V6, t);
-  Blynk.virtualWrite(V7, message);
+  timer.setTimeout(2000L, []() {
+    Blynk.syncVirtual(V0, V1, V3);
+  });
+
+  if (Blynk.connected()) {
+    Blynk.virtualWrite(V4, soilPercent);
+    Blynk.virtualWrite(V5, h);
+    Blynk.virtualWrite(V6, t);
+    Blynk.virtualWrite(V7, message);
+  }
 }
 
 BLYNK_WRITE(V0) {
