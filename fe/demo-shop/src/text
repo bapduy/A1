@@ -10,11 +10,11 @@
 #include <RTClib.h>
 #include <WiFi.h>
 #include <BlynkSimpleEsp32.h>
-#include <Servo.h>
+#include <ESP32Servo.h>
 
 Servo myServo;
 
-#define RAIN_PIN 35       // cảm biến mưa – analog
+#define RAIN_PIN 35       // cảm biến mưa – Digital Output (DO)
 #define SERVO_PIN 27      // servo – PWM
 
 #define SCREEN_WIDTH 128
@@ -35,11 +35,11 @@ char pass[] = "AEngohuu@991";
 float t = 0, h = 0;
 int soilValue = 0;
 int soilPercent = 0;
-int rainValue = 0;
-int rainPercent = 0;
 bool autoMode = false;
 bool timerMode = false;
 bool manualPump = false;
+bool manualServo = false;
+int isRaining = 0;
 
 char message[] = "Ngo Huu Duy - GCS200881";
 char daysOfTheWeek[7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
@@ -71,20 +71,19 @@ void readSensors() {
   soilValue = analogRead(SOIL_PIN);
   soilPercent = map(soilValue, 4095, 0, 0, 100);
 
-  rainValue = analogRead(RAIN_PIN);
-  rainPercent = map(rainValue, 4095, 0, 0, 100); // 0: khô – 100: mưa lớn
+  // Đọc cảm biến mưa (DO): LOW = có mưa
+  isRaining = (digitalRead(RAIN_PIN) == LOW) ? 1 : 0;
 
   Serial.print("Soil: "); Serial.print(soilPercent);
   Serial.print(" %, Temp: "); Serial.print(t);
   Serial.print(" C, Humidity: "); Serial.print(h);
-  Serial.print(" %, Rain: "); Serial.print(rainPercent);
-  Serial.println(" %");
+  Serial.print(" %, Rain: "); Serial.println(isRaining ? "☔️ Rain" : "🌤 Sunny");
 
   if (Blynk.connected()) {
     Blynk.virtualWrite(V4, soilPercent);
     Blynk.virtualWrite(V5, (int)h);
     Blynk.virtualWrite(V6, (int)t);
-    Blynk.virtualWrite(V7, rainPercent);
+    Blynk.virtualWrite(V7, isRaining); // Chỉ 0 hoặc 1
   }
 }
 
@@ -111,6 +110,8 @@ void drawDisplay() {
   display.printf("Soil: %d%%", soilPercent);
   display.setCursor(0, 50);
   display.printf("Pump: %s", digitalRead(RELAY_PIN) ? "ON" : "OFF");
+  display.setCursor(70, 50);
+  display.printf("%s", isRaining ? "Rain" : "Sunny");
   display.display();
 }
 
@@ -144,11 +145,15 @@ void controlPump() {
     digitalWrite(RELAY_PIN, LOW);
   }
 
-  // Điều khiển servo dựa vào mưa
-  if (rainPercent > 50) {
-    myServo.write(90);  // Mưa nhiều → đóng nắp
+  // Điều khiển servo theo mưa
+  if (manualServo) {
+    myServo.write(90);  // Bật nút Blynk → đóng nắp
   } else {
-    myServo.write(0);   // Trời khô → mở nắp
+    if (isRaining) {
+      myServo.write(90);  // Mưa → đóng nắp
+    } else {
+      myServo.write(0);   // Không mưa → mở nắp
+   }
   }
 }
 
@@ -162,8 +167,9 @@ void setup() {
   dht.begin();
   rtc.begin();
 
-  myServo.attach(SERVO_PIN);
-  myServo.write(0);
+  myServo.setPeriodHertz(50); // Tần số 50Hz tiêu chuẩn
+  myServo.attach(SERVO_PIN, 500, 2400); // giới hạn xung cho SG90
+  myServo.write(0); // Góc ban đầu
 
   WiFi.begin(ssid, pass);
   WiFi.setAutoReconnect(true);
@@ -205,7 +211,7 @@ BLYNK_CONNECTED() {
     Blynk.virtualWrite(V4, soilPercent);
     Blynk.virtualWrite(V5, (int)h);
     Blynk.virtualWrite(V6, (int)t);
-    Blynk.virtualWrite(V7, rainPercent);
+    Blynk.virtualWrite(V7, isRaining);
   });
 }
 
@@ -231,4 +237,8 @@ BLYNK_WRITE(V3) {
     autoMode = false;
     timerMode = false;
   }
+}
+
+BLYNK_WRITE(V8) {
+  manualServo = param.asInt();
 }
