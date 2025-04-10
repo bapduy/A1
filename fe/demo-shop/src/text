@@ -10,6 +10,11 @@
 #include <RTClib.h>
 #include <WiFi.h>
 #include <BlynkSimpleEsp32.h>
+#include <Servo.h>
+Servo myServo;
+
+#define RAIN_PIN 35       // cảm biến mưa – analog
+#define SERVO_PIN 27      // servo – PWM
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -67,11 +72,17 @@ void readSensors() {
   Serial.print(" %, Temp: "); Serial.print(t);
   Serial.print(" C, Humidity: "); Serial.println(h);
 
+  Serial.println("→ Submit data to Blynk:");
+  Serial.print("V4 (soilPercent): "); Serial.println(soilPercent);
+  Serial.print("V5 (humidity): "); Serial.println(h);
+  Serial.print("V6 (temperature): "); Serial.println(t);
+
   if (Blynk.connected()) {
     Blynk.virtualWrite(V4, soilPercent);
-    Blynk.virtualWrite(V5, h);
-    Blynk.virtualWrite(V6, t);
+    Blynk.virtualWrite(V5, (int)h);
+    Blynk.virtualWrite(V6, (int)t);  
   }
+
 }
 
 void scrollMessage() {
@@ -163,7 +174,7 @@ void setup() {
   x = display.width();
   minX = -6 * strlen(message);
 
-  timer.setInterval(10000L, readSensors);     // Gửi dữ liệu mỗi 10 giây
+  timer.setInterval(10000L, readSensors);
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
 }
@@ -177,7 +188,9 @@ void loop() {
 BLYNK_CONNECTED() {
   timer.setTimeout(2000L, []() {
     Blynk.syncVirtual(V0, V1, V3);
-    readSensors();  // Gửi lại dữ liệu 1 lần khi kết nối xong
+    Blynk.virtualWrite(V4, soilPercent);
+    Blynk.virtualWrite(V5, (int)h);
+    Blynk.virtualWrite(V6, (int)t);
   });
 }
 
