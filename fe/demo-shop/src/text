@@ -43,6 +43,7 @@ bool manualPump = false;
 bool manualServo = false;
 bool smokeDetected = false;
 bool buzzerActive = false;
+bool lastSmokeState = HIGH;
 unsigned long buzzerStartTime = 0;
 int isRaining = 0;
 
@@ -94,9 +95,11 @@ void readSensors() {
 }
 
 void controlBuzzer() {
-  if (digitalRead(SMOKE_SENSOR_PIN) == LOW && !buzzerActive) {
+  int currentSmoke = digitalRead(SMOKE_SENSOR_PIN);
+  Serial.println("SMOKE = " + String(currentSmoke));
+  if (currentSmoke == LOW && lastSmokeState == HIGH && !buzzerActive)  {
     smokeDetected = true;
-    digitalWrite(BUZZER_RELAY_PIN, HIGH);
+    digitalWrite(BUZZER_RELAY_PIN, LOW);
     buzzerStartTime = millis();
     buzzerActive = true;
     Serial.println("🚨 Báo động: Phát hiện khói!");
@@ -104,15 +107,17 @@ void controlBuzzer() {
 
   // Nếu còi đã kêu và đã đủ 5 giây thì tắt còi
   if (buzzerActive && millis() - buzzerStartTime >= 5000) {
-    digitalWrite(BUZZER_RELAY_PIN, LOW);
+    digitalWrite(BUZZER_RELAY_PIN, HIGH);
     buzzerActive = false;
     Serial.println("🔕 Còi tắt sau 5 giây.");
   }
 
-  // Nếu không phát hiện khói thì reset trạng thái
-  if (digitalRead(SMOKE_SENSOR_PIN) == HIGH) {
+  // Nếu KHÔNG còn khói thì reset lại trạng thái
+  if (currentSmoke == HIGH) {
     smokeDetected = false;
   }
+
+  lastSmokeState = currentSmoke; //  cập nhật lại trạng thái khói cuối cùng
 }
 
 void scrollMessage() {
@@ -194,7 +199,7 @@ void setup() {
 
   pinMode(SMOKE_SENSOR_PIN, INPUT);
   pinMode(BUZZER_RELAY_PIN, OUTPUT);
-  digitalWrite(BUZZER_RELAY_PIN, LOW);
+  digitalWrite(BUZZER_RELAY_PIN, HIGH);
 
   dht.begin();
   rtc.begin();
@@ -236,7 +241,6 @@ void loop() {
   Blynk.run();
   timer.run();
   controlPump();
-  controlBuzzer();
 }
 
 BLYNK_CONNECTED() {
