@@ -14,8 +14,10 @@
 
 Servo myServo;
 
-#define RAIN_PIN 35       // cảm biến mưa – Digital Output (DO)
-#define SERVO_PIN 27      // servo – PWM
+#define RAIN_PIN 35
+#define SERVO_PIN 27
+#define SMOKE_SENSOR_PIN 32
+#define BUZZER_RELAY_PIN 25
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -39,6 +41,9 @@ bool autoMode = false;
 bool timerMode = false;
 bool manualPump = false;
 bool manualServo = false;
+bool smokeDetected = false;
+bool buzzerActive = false;
+unsigned long buzzerStartTime = 0;
 int isRaining = 0;
 
 char message[] = "Ngo Huu Duy - GCS200881";
@@ -73,6 +78,7 @@ void readSensors() {
 
   // Đọc cảm biến mưa (DO): LOW = có mưa
   isRaining = (digitalRead(RAIN_PIN) == LOW) ? 1 : 0;
+  smokeDetected = (digitalRead(SMOKE_SENSOR_PIN) == LOW);
 
   Serial.print("Soil: "); Serial.print(soilPercent);
   Serial.print(" %, Temp: "); Serial.print(t);
@@ -84,6 +90,28 @@ void readSensors() {
     Blynk.virtualWrite(V5, (int)h);
     Blynk.virtualWrite(V6, (int)t);
     Blynk.virtualWrite(V7, isRaining); // Chỉ 0 hoặc 1
+  }
+}
+
+void controlBuzzer() {
+  if (digitalRead(SMOKE_SENSOR_PIN) == LOW && !buzzerActive) {
+    smokeDetected = true;
+    digitalWrite(BUZZER_RELAY_PIN, HIGH);
+    buzzerStartTime = millis();
+    buzzerActive = true;
+    Serial.println("🚨 Báo động: Phát hiện khói!");
+  }
+
+  // Nếu còi đã kêu và đã đủ 5 giây thì tắt còi
+  if (buzzerActive && millis() - buzzerStartTime >= 5000) {
+    digitalWrite(BUZZER_RELAY_PIN, LOW);
+    buzzerActive = false;
+    Serial.println("🔕 Còi tắt sau 5 giây.");
+  }
+
+  // Nếu không phát hiện khói thì reset trạng thái
+  if (digitalRead(SMOKE_SENSOR_PIN) == HIGH) {
+    smokeDetected = false;
   }
 }
 
@@ -164,6 +192,10 @@ void setup() {
   pinMode(SOIL_PIN, INPUT);
   pinMode(RAIN_PIN, INPUT);
 
+  pinMode(SMOKE_SENSOR_PIN, INPUT);
+  pinMode(BUZZER_RELAY_PIN, OUTPUT);
+  digitalWrite(BUZZER_RELAY_PIN, LOW);
+
   dht.begin();
   rtc.begin();
 
@@ -197,12 +229,14 @@ void setup() {
   timer.setInterval(10000L, readSensors);
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
+  timer.setInterval(1000L, controlBuzzer);
 }
 
 void loop() {
   Blynk.run();
   timer.run();
   controlPump();
+  controlBuzzer();
 }
 
 BLYNK_CONNECTED() {
