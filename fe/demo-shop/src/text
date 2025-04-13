@@ -207,6 +207,7 @@ void setup() {
 
   dht.begin();
   rtc.begin();
+  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   myServo.setPeriodHertz(50); // Tần số 50Hz tiêu chuẩn
   myServo.attach(SERVO_PIN, 500, 2400); // giới hạn xung cho SG90
