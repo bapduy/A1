@@ -43,7 +43,6 @@ bool manualPump = false;
 bool manualServo = false;
 bool smokeDetected = false;
 bool buzzerActive = false;
-bool lastSmokeState = HIGH;
 unsigned long buzzerStartTime = 0;
 int isRaining = 0;
 
@@ -77,7 +76,6 @@ void readSensors() {
   soilValue = analogRead(SOIL_PIN);
   soilPercent = map(soilValue, 4095, 0, 0, 100);
 
-  // Đọc cảm biến mưa (DO): LOW = có mưa
   isRaining = (digitalRead(RAIN_PIN) == LOW) ? 1 : 0;
   smokeDetected = (digitalRead(SMOKE_SENSOR_PIN) == LOW);
 
@@ -90,34 +88,35 @@ void readSensors() {
     Blynk.virtualWrite(V4, soilPercent);
     Blynk.virtualWrite(V5, (int)h);
     Blynk.virtualWrite(V6, (int)t);
-    Blynk.virtualWrite(V7, isRaining); // Chỉ 0 hoặc 1
+    Blynk.virtualWrite(V7, isRaining);
   }
 }
 
 void controlBuzzer() {
   int currentSmoke = digitalRead(SMOKE_SENSOR_PIN);
   Serial.println("SMOKE = " + String(currentSmoke));
-  if (currentSmoke == LOW && lastSmokeState == HIGH && !buzzerActive)  {
-    smokeDetected = true;
-    digitalWrite(BUZZER_RELAY_PIN, LOW);
+
+  // Nếu PHÁT HIỆN KHÓI (LOW) và còi chưa được bật
+  if (currentSmoke == LOW && !buzzerActive) {
+    digitalWrite(BUZZER_RELAY_PIN, LOW);  // bật còi
     buzzerStartTime = millis();
     buzzerActive = true;
-    Serial.println("🚨 Báo động: Phát hiện khói!");
+    Serial.println("🚨 Phát hiện khói! Bật còi.");
   }
 
-  // Nếu còi đã kêu và đã đủ 5 giây thì tắt còi
+  // Nếu còi đang bật và đã quá 5 giây → tắt còi
   if (buzzerActive && millis() - buzzerStartTime >= 5000) {
+    digitalWrite(BUZZER_RELAY_PIN, HIGH); // tắt còi
+    buzzerActive = false;
+    Serial.println("🔕 Tắt còi sau 5 giây.");
+  }
+
+  // Nếu KHÔNG CÒN KHÓI thì đảm bảo tắt còi
+  if (currentSmoke == HIGH && buzzerActive) {
     digitalWrite(BUZZER_RELAY_PIN, HIGH);
     buzzerActive = false;
-    Serial.println("🔕 Còi tắt sau 5 giây.");
+    Serial.println("🟢 Không còn khói. Còi tắt.");
   }
-
-  // Nếu KHÔNG còn khói thì reset lại trạng thái
-  if (currentSmoke == HIGH) {
-    smokeDetected = false;
-  }
-
-  lastSmokeState = currentSmoke; //  cập nhật lại trạng thái khói cuối cùng
 }
 
 void scrollMessage() {
