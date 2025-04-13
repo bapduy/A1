@@ -94,11 +94,15 @@ void readSensors() {
 
 void controlBuzzer() {
   int currentSmoke = digitalRead(SMOKE_SENSOR_PIN);
-  Serial.println("SMOKE = " + String(currentSmoke));
+  if (currentSmoke == LOW) {
+    Serial.println("🚨 Có khói!");
+  } else {
+    Serial.println("✅ Không có khói.");
+  }
 
   // Nếu PHÁT HIỆN KHÓI (LOW) và còi chưa được bật
   if (currentSmoke == LOW && !buzzerActive) {
-    digitalWrite(BUZZER_RELAY_PIN, LOW);  // bật còi
+    digitalWrite(BUZZER_RELAY_PIN, HIGH);  // bật còi
     buzzerStartTime = millis();
     buzzerActive = true;
     Serial.println("🚨 Phát hiện khói! Bật còi.");
@@ -106,14 +110,14 @@ void controlBuzzer() {
 
   // Nếu còi đang bật và đã quá 5 giây → tắt còi
   if (buzzerActive && millis() - buzzerStartTime >= 5000) {
-    digitalWrite(BUZZER_RELAY_PIN, HIGH); // tắt còi
+    digitalWrite(BUZZER_RELAY_PIN, LOW); // tắt còi
     buzzerActive = false;
     Serial.println("🔕 Tắt còi sau 5 giây.");
   }
 
   // Nếu KHÔNG CÒN KHÓI thì đảm bảo tắt còi
   if (currentSmoke == HIGH && buzzerActive) {
-    digitalWrite(BUZZER_RELAY_PIN, HIGH);
+    digitalWrite(BUZZER_RELAY_PIN, LOW);
     buzzerActive = false;
     Serial.println("🟢 Không còn khói. Còi tắt.");
   }
@@ -198,7 +202,7 @@ void setup() {
 
   pinMode(SMOKE_SENSOR_PIN, INPUT);
   pinMode(BUZZER_RELAY_PIN, OUTPUT);
-  digitalWrite(BUZZER_RELAY_PIN, HIGH);
+  digitalWrite(BUZZER_RELAY_PIN, LOW);
 
   dht.begin();
   rtc.begin();
@@ -233,7 +237,7 @@ void setup() {
   timer.setInterval(10000L, readSensors);
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
-  timer.setInterval(1000L, controlBuzzer);
+  timer.setInterval(5000L, controlBuzzer);
 }
 
 void loop() {
