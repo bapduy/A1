@@ -161,6 +161,7 @@ void controlPump() {
   int hour = now.hour();
   int minute = now.minute();
 
+  // Điều khiển máy bơm
   if (manualPump) {
     digitalWrite(RELAY_PIN, HIGH);
     delay(200);
@@ -186,29 +187,38 @@ void controlPump() {
     digitalWrite(RELAY_PIN, LOW);
   }
 
-  // Servo mở cửa đồng bộ với còi khi phát hiện khói
+  // ----- CẢNH BÁO KHÓI: MỞ CỬA + BẬT CÒI -----
   if (smokeDetected && !servoSmokeActive) {
-    myServo.write(0);
+    myServo.write(0); // Mở nắp
+    digitalWrite(BUZZER_RELAY_PIN, HIGH); // Bật còi
+    buzzerActive = true;
+    buzzerStartTime = millis();
     servoSmokeActive = true;
-    servoSmokeStartTime = millis();
-    Serial.println("\xf0\x9f\x9a\xa8 Mở nắp do phát hiện khói (10 giây).\n");
-  }
-  if (servoSmokeActive && millis() - servoSmokeStartTime >= 10000) {
-    servoSmokeActive = false;
-    Serial.println("\xe2\x9c\x85 Đã hết 10 giây mở nắp do khói, trở về điều khiển bình thường.");
+    servoSmokeStartTime = buzzerStartTime;
+    Serial.println("🚨 Phát hiện khói: Mở nắp và bật còi trong 10 giây.");
   }
 
+  // Sau 10 giây thì tắt cả còi và servo
+  if (servoSmokeActive && millis() - servoSmokeStartTime >= 10000) {
+    myServo.write(90); // Đóng nắp lại
+    digitalWrite(BUZZER_RELAY_PIN, LOW); // Tắt còi
+    buzzerActive = false;
+    servoSmokeActive = false;
+    Serial.println("✅ Hết 10 giây: Tắt còi và đóng nắp.");
+  }
+
+  // Nếu không có khói thì điều khiển nắp như bình thường
   if (!servoSmokeActive) {
     if (manualServo) {
       myServo.write(90);
-      Serial.println("\xf0\x9f\x9f\xa2 Đóng nắp (manual)");
+      Serial.println("🟢 Đóng nắp (manual)");
     } else {
       if (isRaining) {
         myServo.write(90);
-        Serial.println("\xf0\x9f\x8c\xa7 Đóng nắp do trời mưa");
+        Serial.println("🌧 Đóng nắp do trời mưa");
       } else {
         myServo.write(0);
-        Serial.println("\xf0\x9f\x8c\xa4 Mở nắp do không mưa");
+        Serial.println("🌤 Mở nắp do không mưa");
       }
     }
   }
@@ -259,7 +269,7 @@ void setup() {
   timer.setInterval(1000L, readSensors);
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
-  timer.setInterval(1000L, controlBuzzer);
+  //timer.setInterval(1000L, controlBuzzer);
 }
 
 void loop() {
