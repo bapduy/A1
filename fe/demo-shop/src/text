@@ -19,6 +19,10 @@ Servo myServo;
 #define SMOKE_SENSOR_PIN 32
 #define BUZZER_RELAY_PIN 25
 
+#define LED_AUTO_PIN 17
+#define LED_TIMER_PIN 18
+#define LED_MANUAL_PIN 19
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
@@ -224,6 +228,12 @@ void controlPump() {
   }
 }
 
+void updateModeLEDs() {
+  digitalWrite(LED_AUTO_PIN, autoMode ? HIGH : LOW);
+  digitalWrite(LED_TIMER_PIN, timerMode ? HIGH : LOW);
+  digitalWrite(LED_MANUAL_PIN, manualPump ? HIGH : LOW);
+}
+
 void setup() {
   Serial.begin(115200);
   pinMode(RELAY_PIN, OUTPUT);
@@ -234,6 +244,14 @@ void setup() {
   pinMode(SMOKE_SENSOR_PIN, INPUT);
   pinMode(BUZZER_RELAY_PIN, OUTPUT);
   digitalWrite(BUZZER_RELAY_PIN, LOW);
+
+  pinMode(LED_AUTO_PIN, OUTPUT);
+  pinMode(LED_TIMER_PIN, OUTPUT);
+  pinMode(LED_MANUAL_PIN, OUTPUT);
+
+  digitalWrite(LED_AUTO_PIN, LOW);
+  digitalWrite(LED_TIMER_PIN, LOW);
+  digitalWrite(LED_MANUAL_PIN, LOW);
 
   dht.begin();
   rtc.begin();
@@ -276,6 +294,7 @@ void loop() {
   Blynk.run();
   timer.run();
   controlPump();
+  updateModeLEDs();
 }
 
 BLYNK_CONNECTED() {
@@ -294,6 +313,7 @@ BLYNK_WRITE(V0) {
     timerMode = false;
     manualPump = false;
   }
+  updateModeLEDs();
 }
 
 BLYNK_WRITE(V1) {
@@ -302,6 +322,7 @@ BLYNK_WRITE(V1) {
     autoMode = false;
     manualPump = false;
   }
+  updateModeLEDs();
 }
 
 BLYNK_WRITE(V3) {
@@ -310,6 +331,7 @@ BLYNK_WRITE(V3) {
     autoMode = false;
     timerMode = false;
   }
+  updateModeLEDs();
 }
 
 BLYNK_WRITE(V8) {
