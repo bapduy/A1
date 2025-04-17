@@ -1,6 +1,6 @@
-#define BLYNK_TEMPLATE_ID "TMPL60Bs1oNxd"
+#define BLYNK_TEMPLATE_ID "TMPL6J4uGrDer"
 #define BLYNK_TEMPLATE_NAME "Automatic watering system"
-#define BLYNK_AUTH_TOKEN "seCRIGZZnfL1EEBPTpBeQokTW-4b_Utw"
+#define BLYNK_AUTH_TOKEN "-TngHAaTVnB5g8xJ2UCeVlN6q-IIXumC"
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -91,11 +91,20 @@ void readSensors() {
   Serial.print(" C, Humidity: "); Serial.print(h);
   Serial.print(" %, Rain: "); Serial.println(isRaining ? "☔️ Rain" : "🌤 Sunny");
 
+  // if (Blynk.connected()) {
+  //   Blynk.virtualWrite(V4, soilPercent);
+  //   Blynk.virtualWrite(V5, (int)h);
+  //   Blynk.virtualWrite(V6, (int)t);
+  //   Blynk.virtualWrite(V7, isRaining);
+  // }
+}
+
+void sendDataToBlynk() {
   if (Blynk.connected()) {
     Blynk.virtualWrite(V4, soilPercent);
     Blynk.virtualWrite(V5, (int)h);
     Blynk.virtualWrite(V6, (int)t);
-    Blynk.virtualWrite(V7, isRaining);
+    Blynk.virtualWrite(V7, isRaining ? "Rain" : "Sunny");
   }
 }
 
@@ -288,6 +297,7 @@ void setup() {
   timer.setInterval(20L, scrollMessage);
   timer.setInterval(100L, drawDisplay);
   //timer.setInterval(1000L, controlBuzzer);
+  timer.setInterval(10000L, sendDataToBlynk);
 }
 
 void loop() {
@@ -300,10 +310,8 @@ void loop() {
 BLYNK_CONNECTED() {
   timer.setTimeout(2000L, []() {
     Blynk.syncVirtual(V0, V1, V3);
-    Blynk.virtualWrite(V4, soilPercent);
-    Blynk.virtualWrite(V5, (int)h);
-    Blynk.virtualWrite(V6, (int)t);
-    Blynk.virtualWrite(V7, isRaining);
+    Blynk.virtualWrite(V2, message); 
+    sendDataToBlynk();
   });
 }
 
