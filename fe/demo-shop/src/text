@@ -41,6 +41,7 @@ char pass[] = "AEngohuu@991";
 float t = 0, h = 0;
 int soilValue = 0;
 int soilPercent = 0;
+int currentServoAngle = -1;
 bool autoMode = false;
 bool timerMode = false;
 bool manualPump = false;
@@ -222,17 +223,26 @@ void controlPump() {
 
   // Nếu không có khói thì điều khiển nắp như bình thường
   if (!servoSmokeActive) {
+    int targetAngle = -1;
+    String servoReason = "";
+
     if (manualServo) {
-      myServo.write(90);
-      Serial.println("🟢 Đóng nắp (manual)");
+      targetAngle = 90;
+      servoReason = ("🟢 Đóng nắp (manual)");
     } else {
       if (isRaining) {
-        myServo.write(90);
-        Serial.println("🌧 Đóng nắp do trời mưa");
+        targetAngle = 90;
+        servoReason = ("🌧 Đóng nắp do trời mưa");
       } else {
-        myServo.write(0);
-        Serial.println("🌤 Mở nắp do không mưa");
+        targetAngle = 0;
+        servoReason = ("🌤 Mở nắp do không mưa");
       }
+    }
+
+    if (targetAngle != currentServoAngle) {
+      myServo.write(targetAngle);
+      Serial.println(servoReason);
+      currentServoAngle = targetAngle;
     }
   }
 }
@@ -241,6 +251,16 @@ void updateModeLEDs() {
   digitalWrite(LED_AUTO_PIN, autoMode ? HIGH : LOW);
   digitalWrite(LED_TIMER_PIN, timerMode ? HIGH : LOW);
   digitalWrite(LED_MANUAL_PIN, manualPump ? HIGH : LOW);
+
+  sendModeStatusToBlynk();
+}
+
+void sendModeStatusToBlynk() {
+  if (Blynk.connected()) {
+    Blynk.virtualWrite(V9, autoMode ? 255 : 0);
+    Blynk.virtualWrite(V10, timerMode ? 255 : 0);
+    Blynk.virtualWrite(V11, manualPump ? 255 : 0);
+  }
 }
 
 void setup() {
@@ -312,6 +332,7 @@ BLYNK_CONNECTED() {
     Blynk.syncVirtual(V0, V1, V3);
     Blynk.virtualWrite(V2, message); 
     sendDataToBlynk();
+    sendModeStatusToBlynk();
   });
 }
 
