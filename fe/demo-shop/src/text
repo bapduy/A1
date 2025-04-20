@@ -251,16 +251,6 @@ void updateModeLEDs() {
   digitalWrite(LED_AUTO_PIN, autoMode ? HIGH : LOW);
   digitalWrite(LED_TIMER_PIN, timerMode ? HIGH : LOW);
   digitalWrite(LED_MANUAL_PIN, manualPump ? HIGH : LOW);
-
-  sendModeStatusToBlynk();
-}
-
-void sendModeStatusToBlynk() {
-  if (Blynk.connected()) {
-    Blynk.virtualWrite(V9, autoMode ? 255 : 0);
-    Blynk.virtualWrite(V10, timerMode ? 255 : 0);
-    Blynk.virtualWrite(V11, manualPump ? 255 : 0);
-  }
 }
 
 void setup() {
@@ -332,7 +322,6 @@ BLYNK_CONNECTED() {
     Blynk.syncVirtual(V0, V1, V3);
     Blynk.virtualWrite(V2, message); 
     sendDataToBlynk();
-    sendModeStatusToBlynk();
   });
 }
 
